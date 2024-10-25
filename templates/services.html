@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Services - After Lunch 420 Bank{% endblock %}
+
+{% block content %}
+    <h2>Our Services</h2>
+    <p>After Lunch 420 Bank provides a wide range of services, including:</p>
+
+    <!-- Accordion for services -->
+    <div class="accordion" id="servicesAccordion">
+        <div class="card">
+            <div class="card-header" id="headingOne">
+                <h2 class="mb-0">
+                    <button class="btn btn-link text-decoration-none" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                        Savings Accounts
+                    </button>
+                </h2>
+            </div>
+            <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#servicesAccordion">
+                <div class="card-body">
+                    Our savings accounts offer competitive interest rates and provide easy access to your funds. With flexible withdrawal options, you can save securely while maintaining liquidity.
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header" id="headingTwo">
+                <h2 class="mb-0">
+                    <button class="btn btn-link text-decoration-none collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                        Fixed Deposits
+                    </button>
+                </h2>
+            </div>
+            <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#servicesAccordion">
+                <div class="card-body">
+                    Enjoy higher returns with our fixed deposit plans, which offer various tenure options to suit your financial goals. Lock in your funds for a fixed term and earn guaranteed returns.
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header" id="headingThree">
+                <h2 class="mb-0">
+                    <button class="btn btn-link text-decoration-none collapsed" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                        Home Loans
+                    </button>
+                </h2>
+            </div>
+            <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#servicesAccordion">
+                <div class="card-body">
+                    Get closer to your dream home with our affordable home loan solutions. We offer competitive interest rates, flexible repayment options, and quick processing for a smooth borrowing experience.
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header" id="headingFour">
+                <h2 class="mb-0">
+                    <button class="btn btn-link text-decoration-none collapsed" type="button" data-toggle="collapse" data-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                        Car Loans
+                    </button>
+                </h2>
+            </div>
+            <div id="collapseFour" class="collapse" aria-labelledby="headingFour" data-parent="#servicesAccordion">
+                <div class="card-body">
+                    Drive your dream car with our flexible car loan options. We offer competitive rates, customized repayment plans, and easy documentation to make your car purchase hassle-free.
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header" id="headingFive">
+                <h2 class="mb-0">
+                    <button class="btn btn-link text-decoration-none collapsed" type="button" data-toggle="collapse" data-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+                        Credit Cards
+                    </button>
+                </h2>
+            </div>
+            <div id="collapseFive" class="collapse" aria-labelledby="headingFive" data-parent="#servicesAccordion">
+                <div class="card-body">
+                    Our credit cards come with a range of benefits, including cashback, rewards, and travel privileges. Enjoy worldwide acceptance, secure transactions, and flexible payment options.
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

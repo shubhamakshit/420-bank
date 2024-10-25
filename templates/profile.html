@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - XYZ Bank{% endblock %}
+
+{% block content %}
+    <h2>Your Profile</h2>
+
+    {% if 'user_data' in request.cookies %}
+        <p>Welcome back! Your data: {{ request.cookies.get('user_data') }}</p>
+        <form method="POST" action="{{ url_for('logout') }}">
+            <button type="submit" class="btn btn-danger">Logout</button>
+        </form>
+    {% else %}
+        <p>You are not logged in. Please <a href="{{ url_for('login') }}">log in</a>.</p>
+    {% endif %}
+{% endblock %}

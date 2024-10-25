@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Thank You - {{ BANK_NAME }}{% endblock %}
+
+{% block content %}
+    <div class="container mt-5 text-center">
+        <h2>Thank You for Your Application!</h2>
+        <p>We appreciate your interest in joining our team at {{ BANK_NAME }}. Our HR team will review your application and get back to you soon.</p>
+        <h4>But wait...</h4>
+        <p>Didn’t you always want to be a hacker? Why are you filling out applications and following the rules?</p>
+        <p>How about trying to hack our website instead? Just kidding! 😄 But seriously, if you have skills in cybersecurity, we could use a talented mind like yours on our team!</p>
+        <a href="{{ url_for('careers') }}" class="btn btn-primary">Back to Careers</a>
+    </div>
+{% endblock %}

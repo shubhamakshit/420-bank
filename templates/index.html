@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}XYZ Bank - Secure Banking{% endblock %}
+
+{% block content %}
+    <header class="hero-section">
+        <div class="container text-center">
+            <h1>Welcome to XYZ Bank</h1>
+            <p>Your trusted partner in financial growth.</p>
+            <a href="{{ url_for('services') }}" class="btn btn-primary btn-lg">Explore Our Services</a>
+        </div>
+    </header>
+
+    <section class="features-section py-5">
+        <div class="container">
+            <div class="row text-center">
+                <div class="col-md-4">
+                    <i class="fas fa-piggy-bank fa-3x mb-3"></i>
+                    <h3>Banking Solutions</h3>
+                    <p>We provide top-notch savings, checking, and credit services to suit your financial needs.</p>
+                </div>
+                <div class="col-md-4">
+                    <i class="fas fa-chart-line fa-3x mb-3"></i>
+                    <h3>Investments</h3>
+                    <p>Grow your wealth with our curated investment options tailored just for you.</p>
+                </div>
+                <div class="col-md-4">
+                    <i class="fas fa-mobile-alt fa-3x mb-3"></i>
+                    <h3>Mobile Banking</h3>
+                    <p>Access your accounts anytime, anywhere with our secure mobile banking app.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="services-section bg-light py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">Our Services</h2>
+            <div class="row">
+                <div class="col-md-6">
+                    <h4>Personal Banking</h4>
+                    <p>From checking accounts to loans, we offer a range of services for individual customers.</p>
+                </div>
+                <div class="col-md-6">
+                    <h4>Business Banking</h4>
+                    <p>Our solutions help small businesses and large corporations manage their finances with ease.</p>
+                </div>
+                <div class="col-md-6">
+                    <h4>Insurance Plans</h4>
+                    <p>Protect what matters with our comprehensive insurance plans for you and your family.</p>
+                </div>
+                <div class="col-md-6">
+                    <h4>Loans and Mortgages</h4>
+                    <p>We offer competitive loan rates and flexible mortgage plans to help you achieve your dreams.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="about-section py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">{{ BANK_NAME }}</h2>
+            <p>XYZ Bank has been a trusted name in the banking industry for over 50 years. Our mission is to provide our customers with innovative banking solutions that meet their financial needs. We take pride in our customer service and our commitment to helping individuals and businesses grow.</p>
+        </div>
+    </section>
+{% endblock %}

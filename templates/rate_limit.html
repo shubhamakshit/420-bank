@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Blocked :  {{ job_title }} - {{ BANK_NAME }}{% endblock %}
+{% block content %}
+    <h2>Rate Limit Exceeded</h2>
+    <p>You have exceeded the maximum number of {{ max_requests }} job applications per {{ time_window }} hour(s).</p>
+    {% if remaining_time %}
+        <p>Please try again in {{ remaining_time // 3600 }} hours and {{ (remaining_time % 3600) // 60 }} minutes.</p>
+    {% endif %}
+{% endblock %}

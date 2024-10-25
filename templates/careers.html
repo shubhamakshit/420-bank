@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Careers - {{ BANK_NAME }}{% endblock %}
+
+{% block content %}
+    <div class="container mt-5">
+        <h2 class="text-center mb-4">Join Our Team at {{ BANK_NAME }}</h2>
+        <p class="text-center mb-5">Explore career opportunities with us and help shape the future of banking. We are looking for talented individuals who are passionate about making a difference.</p>
+
+        <div class="row">
+            <!-- Job Card 1 -->
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <img src="{{ url_for('static', filename='images/job1.jpg') }}" class="card-img-top" alt="Job Image 1">
+                    <div class="card-body">
+                        <h5 class="card-title">Software Engineer</h5>
+                        <p class="card-text">Be part of our tech team, developing innovative solutions for the banking sector.</p>
+                        <a href="{{ url_for('apply', job_title='Software Engineer') }}" class="btn btn-primary">Apply Now</a>
+                    </div>
+                </div>
+            </div>
+            <!-- Job Card 2 -->
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <img src="{{ url_for('static', filename='images/job2.jpg') }}" class="card-img-top" alt="Job Image 2">
+                    <div class="card-body">
+                        <h5 class="card-title">Financial Analyst</h5>
+                        <p class="card-text">Help us analyze financial data to drive better business decisions.</p>
+                        <a href="{{ url_for('apply', job_title='Financial Analyst') }}" class="btn btn-primary">Apply Now</a>
+                    </div>
+                </div>
+            </div>
+            <!-- Job Card 3 -->
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <img src="{{ url_for('static', filename='images/job3.jpg') }}" class="card-img-top" alt="Job Image 3">
+                    <div class="card-body">
+                        <h5 class="card-title">Customer Service Representative</h5>
+                        <p class="card-text">Provide exceptional customer service and assist clients with their banking needs.</p>
+                        <a href="{{ url_for('apply', job_title='Customer Service Representative') }}" class="btn btn-primary">Apply Now</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Job Card 4 -->
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <img src="{{ url_for('static', filename='images/job4.jpg') }}" class="card-img-top" alt="Job Image 4">
+                    <div class="card-body">
+                        <h5 class="card-title">Marketing Specialist</h5>
+                        <p class="card-text">Join our marketing team and help us expand our brand reach and customer base.</p>
+                        <a href="{{ url_for('apply', job_title='Marketing Specialist') }}" class="btn btn-primary">Apply Now</a>
+                    </div>
+                </div>
+            </div>
+            <!-- Job Card 5 -->
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <img src="{{ url_for('static', filename='images/job5.jpg') }}" class="card-img-top" alt="Job Image 5">
+                    <div class="card-body">
+                        <h5 class="card-title">HR Manager</h5>
+                        <p class="card-text">Oversee the HR department and help recruit and retain top talent.</p>
+                        <a href="{{ url_for('apply', job_title='HR Manager') }}" class="btn btn-primary">Apply Now</a>
+                    </div>
+                </div>
+            </div>
+            <!-- Job Card 6 -->
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <img src="{{ url_for('static', filename='images/job6.jpg') }}" class="card-img-top" alt="Job Image 6">
+                    <div class="card-body">
+                        <h5 class="card-title">Data Scientist</h5>
+                        <p class="card-text">Utilize data to drive decision-making and uncover insights for our business.</p>
+                        <a href="{{ url_for('apply', job_title='Data Scientist') }}" class="btn btn-primary">Apply Now</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

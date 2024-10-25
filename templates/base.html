@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ BANK_NAME }}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        /* Custom Styles */
+        body {
+            background-color: #f4f4f9;
+            font-family: 'Arial', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .navbar {
+            background: linear-gradient(90deg, #8e44ad, #e91e63);
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: #ffffff !important;
+        }
+        .navbar-nav .nav-link {
+            color: #ffffff !important;
+            font-size: 1.1em;
+            text-decoration: none;
+        }
+        .navbar-nav .nav-link:hover {
+            color: #ffd700 !important;
+        }
+        .navbar-nav .nav-link:focus {
+            outline: none;
+            box-shadow: none;
+        }
+        .navbar-nav .nav-item {
+            margin: 0 10px;
+        }
+        .container {
+            background: #ffffff;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        footer {
+            background: #8e44ad;
+            color: #ffffff;
+            font-size: 0.9em;
+        }
+        footer p {
+            margin: 0;
+        }
+        .navbar-toggler {
+            border-color: #ffffff;
+        }
+        .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(255, 255, 255, 1)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+        }
+        .navbar-nav {
+            list-style-type: none;
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+<nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="{{ url_for('index') }}">
+        <i class="fas fa-university mr-2"></i>{{ BANK_NAME }}
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <i class="fas fa-bars" style="color: #ffffff;"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ml-auto d-flex align-items-center">
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}"><i class="fas fa-info-circle mr-2"></i>About Us</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('services') }}"><i class="fas fa-cogs mr-2"></i>Services</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('careers') }}"><i class="fas fa-briefcase mr-2"></i>Careers</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('contact') }}"><i class="fas fa-envelope mr-2"></i>Contact Us</a></li>
+        </ul>
+    </div>
+</nav>
+
+<div class="container mt-5 flex-grow-1">
+    {% block content %}{% endblock %}
+</div>
+
+<footer class="text-center py-3 mt-auto">
+    <p><i class="far fa-copyright mr-2"></i>{{ BANK_NAME }} 2024. All Rights Reserved.</p>
+</footer>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

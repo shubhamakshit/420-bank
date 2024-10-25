@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}About Us - {{ BANK_NAME }}{% endblock %}
+
+{% block content %}
+    <h1 class="mb-4">About {{ BANK_NAME }}</h1>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="card-title">Our Unique Approach</h2>
+            <p class="card-text">At {{ BANK_NAME }}, we pride ourselves on our unconventional and totally "fair" banking practices. We're not your average financial institution – we're special, and here's why:</p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3 class="card-title"><i class="fas fa-clock mr-2"></i>The Famous "After Lunch" Service</h3>
+            <p class="card-text">We believe banking should never interfere with a good meal. That's why we've pioneered our revolutionary "After Lunch" service hours. All important financial decisions and transactions are made exclusively between 2 PM and 4 PM, when our staff is comfortably full and slightly drowsy. We find this leads to more "relaxed" financial advice and "creative" accounting practices.</p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3 class="card-title"><i class="fas fa-balance-scale mr-2"></i>Our "Robin Hood" Lending Policy</h3>
+            <p class="card-text">We have a unique approach to loans:</p>
+            <ul>
+                <li>For our VIP clients (a.k.a. "Big People"), we offer generous loans with a "pay if you feel like it" repayment plan. After all, if you're too big to fail, you're too big to pay us back, right?</li>
+                <li>For our regular clients (a.k.a. "Small People"), we offer a more "hands-on" approach. Our dedicated team of loan officers will remind you about your repayments through daily phone calls, hourly emails, and the occasional interpretive dance outside your home or workplace.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3 class="card-title"><i class="fas fa-piggy-bank mr-2"></i>Innovative Savings Accounts</h3>
+            <p class="card-text">Our savings accounts come with a thrilling "Mystery Interest Rate" feature. It's like a financial rollercoaster – your interest rate could skyrocket to 0.02% one day and plummet to -3% the next. We call it "Savings Account Roulette" – because who doesn't love a little gamble with their life savings?</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <h3 class="card-title"><i class="fas fa-handshake mr-2"></i>Our Commitment</h3>
+            <p class="card-text">At {{ BANK_NAME }}, we're committed to providing banking services that are as unpredictable as the stock market and as transparent as a brick wall. Because in the world of finance, confusion is key!</p>
+            <p class="card-text font-italic">Remember our slogan: "{{ BANK_NAME }} - Where your money does... something!"</p>
+        </div>
+    </div>
+{% endblock %}

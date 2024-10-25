@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Unauthorized Access{% endblock %}
+
+{% block content %}
+    <div class="text-center mt-5">
+        <h1 class="display-4">Unauthorized Access</h1>
+        <p class="lead">You are not authorized to access this page.</p>
+        <p>Please contact your administrator if you believe this is an error.</p>
+        <a class="btn btn-primary" href="{{ url_for('index') }}">Return to Home</a>
+    </div>
+{% endblock %}
