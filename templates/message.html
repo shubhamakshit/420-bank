@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Message - {{ BANK_NAME }}{% endblock %}
+
+{% block content %}
+    <div class="message-container text-center">
+        <!-- Display the icon if provided -->
+        {% if icon %}
+            <div class="icon mb-3">
+                <i class="fas {{ icon }} fa-3x" style="color: {{ icon_color }}"></i>
+            </div>
+        {% endif %}
+
+        <!-- Display the message -->
+        <div class="message-text mb-4">
+            <h4>{{ message }}</h4>
+        </div>
+
+        <!-- Display the document link if provided -->
+        {% if document_link and document_text %}
+            <div class="document-link mb-3">
+                <a href="{{ document_link }}" class="btn btn-primary">
+                    <i class="fas fa-file-alt mr-2"></i>{{ document_text }}
+                </a>
+            </div>
+        {% endif %}
+
+        <!-- Optionally add a back or home button -->
+        <div class="navigation-buttons mt-3">
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                <i class="fas fa-home mr-2"></i>Back to Home
+            </a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block styles %}
+    <style>
+        .message-container {
+            padding: 2rem;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .icon {
+            color: #4caf50;
+        }
+        .message-text {
+            font-size: 1.2em;
+            color: #333;
+        }
+        .document-link a {
+            text-decoration: none;
+        }
+    </style>
+{% endblock %}

@@ -1,19 +1,30 @@
 import MySQLdb
 from faker import Faker
-from tqdm import tqdm  # For showing progress bar
+from tqdm import tqdm
 import hashlib
+from db_var import db_pool, SpecialUser
+from typing import List, Union, Optional
+import logging
+from datetime import datetime
 
-class Db:
-    def __init__(self, host, user, password, database):
-        # Connect to the MySQL database
-        self.db = MySQLdb.connect(host, user, password, database)
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    filename=f'db_operations_{datetime.now().strftime("%Y%m%d")}.log'
+)
+
+class DatabaseManager:
+    def __init__(self):
+        self.db = db_pool.connection()
         self.cursor = self.db.cursor()
+        self.special_user = SpecialUser()
+        self.fake = Faker()
 
     def drop_and_create_table(self):
-        # Drop the existing users table if it exists
+        """Drop and recreate the users table with additional columns"""
         self.cursor.execute("DROP TABLE IF EXISTS users")
 
-        # Create the new users table
         create_table_query = """
         CREATE TABLE users (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -21,82 +32,184 @@ class Db:
             password VARCHAR(255) DEFAULT NULL,
             is_admin TINYINT(1) DEFAULT NULL,
             admin_password VARCHAR(255) DEFAULT NULL,
-            admin_and_ftp TINYINT(1) DEFAULT NULL
+            admin_and_ftp TINYINT(1) DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            status ENUM('active', 'inactive', 'suspended') DEFAULT 'active',
+            login_attempts INT DEFAULT 0
         )
         """
         self.cursor.execute(create_table_query)
         self.db.commit()
+        logging.info("Table created successfully")
 
-    def add_fake_data(self, num_users=1302):
-        # Initialize Faker
-        fake = Faker()
-
-        # Insert fake users into the database
+    def add_fake_data(self, num_users: int = 1302, special_user_id: Optional[int] = None):
+        """Add fake data with option to specify special user ID"""
         insert_query = """
-        INSERT INTO users (username, password, is_admin, admin_password, admin_and_ftp)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO users (id, username, password, is_admin, admin_password, admin_and_ftp, status)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
 
-        # Add the special entry
-        special_username = "angleojo"
-        original_password = "ThereIsNoEscape"
-        special_password_hash = hashlib.sha256(original_password.encode('utf-8')).hexdigest()
-        special_is_admin = True
-        special_admin_password = "youAreA--' '-HackerMaybeYes##$%"
-        special_admin_and_ftp = True
-        self.cursor.execute(insert_query, (special_username, special_password_hash, special_is_admin, special_admin_password, special_admin_and_ftp))
+        # Add special user with specific ID if provided
+        special_user_data = list(self.special_user.to_tuple())
+        if special_user_id:
+            special_user_data.insert(0, special_user_id)
+            special_user_data.append('active')  # Add status
+            self.cursor.execute(insert_query, special_user_data)
+            self.special_user.print_details()
+        else:
+            print(f"Not adding special user for {num_users} users")
+            pass
 
-        # Print details of the special user
-        print("\nSpecial User Details:")
-        print(f"Username: {special_username}")
-        print(f"Original Password: {original_password}")
-        print(f"Hashed Password (SHA-256): {special_password_hash}")
-        print(f"Is Admin: {special_is_admin}")
-        print(f"Admin Password: {special_admin_password}")
-        print(f"Admin and FTP: {special_admin_and_ftp}\n")
 
-        # Add the remaining users
-        for _ in tqdm(range(num_users - 1), desc="Adding users"):
-            # Generate fake data for the user
-            username = fake.user_name()
-            # Hash the password using SHA-256
-            password_hash = hashlib.sha256(fake.password(length=10).encode('utf-8')).hexdigest()
-            is_admin = fake.boolean(chance_of_getting_true=10)  # 10% chance of being an admin
-            admin_password = fake.password(length=15) if is_admin else None
-            admin_and_ftp = fake.boolean(chance_of_getting_true=5)  # 5% chance for admin_and_ftp being true
 
-            # Insert the user data
-            self.cursor.execute(insert_query, (username, password_hash, is_admin, admin_password, admin_and_ftp))
 
-        # Commit the changes to the database
+        # Prepare batch insertion for better performance
+        batch_size = 1000
+        users_batch = []
+
+        for _ in tqdm(range(num_users - 1), desc="Preparing users"):
+            user_data = [
+                None,  # ID (auto-increment)
+                self.fake.user_name(),
+                hashlib.sha256(self.fake.password(length=10).encode('utf-8')).hexdigest(),
+                self.fake.boolean(chance_of_getting_true=10),
+                self.fake.password(length=15) if self.fake.boolean(chance_of_getting_true=10) else None,
+                self.fake.boolean(chance_of_getting_true=5),
+                self.fake.random_element(elements=('active', 'inactive', 'suspended'))
+            ]
+            users_batch.append(user_data)
+
+            if len(users_batch) >= batch_size:
+                self.cursor.executemany(insert_query, users_batch)
+                users_batch = []
+
+        # Insert remaining users
+        if users_batch:
+            self.cursor.executemany(insert_query, users_batch)
+
         self.db.commit()
+        logging.info(f"Added {num_users} users successfully")
+
+    def append_data(self, num_users: int):
+        """Append additional users to the existing table"""
+        logging.info(f"Appending {num_users} users to the database")
+        self.add_fake_data(num_users=num_users)
+
+    def delete_users_by_range(self, start_id: int, end_id: int):
+        """Delete users within a specified ID range"""
+        delete_query = "DELETE FROM users WHERE id BETWEEN %s AND %s"
+        self.cursor.execute(delete_query, (start_id, end_id))
+        deleted_count = self.cursor.rowcount
+        self.db.commit()
+        logging.info(f"Deleted {deleted_count} users between IDs {start_id} and {end_id}")
+        return deleted_count
+
+    def update_special_user_id(self, new_id: int):
+        """Update the ID of the special user"""
+        update_query = "UPDATE users SET id = %s WHERE username = %s"
+        self.cursor.execute(update_query, (new_id, self.special_user.username))
+        self.db.commit()
+        logging.info(f"Updated special user ID to {new_id}")
+
+    def get_user_stats(self) -> dict:
+        """Get statistics about users in the database"""
+        stats = {}
+
+        # Total users
+        self.cursor.execute("SELECT COUNT(*) FROM users")
+        stats['total_users'] = self.cursor.fetchone()[0]
+
+        # Admin users count
+        self.cursor.execute("SELECT COUNT(*) FROM users WHERE is_admin = 1")
+        stats['admin_count'] = self.cursor.fetchone()[0]
+
+        # Status distribution
+        self.cursor.execute("""
+            SELECT status, COUNT(*) 
+            FROM users 
+            GROUP BY status
+        """)
+        stats['status_distribution'] = dict(self.cursor.fetchall())
+
+        return stats
+
+    def bulk_status_update(self, status: str, id_list: List[int]):
+        """Update status for multiple users at once"""
+        if status not in ['active', 'inactive', 'suspended']:
+            raise ValueError("Invalid status value")
+
+        update_query = "UPDATE users SET status = %s WHERE id IN ({})".format(
+            ','.join(['%s'] * len(id_list))
+        )
+        self.cursor.execute(update_query, [status] + id_list)
+        self.db.commit()
+        logging.info(f"Updated status to {status} for {len(id_list)} users")
+
+    def find_suspicious_users(self) -> List[tuple]:
+        """Find potentially suspicious users based on various criteria"""
+        query = """
+        SELECT id, username, login_attempts 
+        FROM users 
+        WHERE login_attempts > 5 
+        OR (is_admin = 1 AND admin_and_ftp = 1)
+        """
+        self.cursor.execute(query)
+        return self.cursor.fetchall()
+
+    def backup_table(self, backup_table_name: str):
+        """Create a backup of the users table"""
+        self.cursor.execute(f"DROP TABLE IF EXISTS {backup_table_name}")
+        self.cursor.execute(f"CREATE TABLE {backup_table_name} LIKE users")
+        self.cursor.execute(f"INSERT INTO {backup_table_name} SELECT * FROM users")
+        self.db.commit()
+        logging.info(f"Created backup table: {backup_table_name}")
 
     def close_connection(self):
-        # Close the database connection
+        """Close database connection"""
         self.cursor.close()
         self.db.close()
+        logging.info("Database connection closed")
 
-
-# Main code execution
-if __name__ == '__main__':
-    # Database connection parameters (replace with your own credentials)
-    host = "172.23.98.94"
-    user = "root"
-    password = "akshit"
-    database = "bank"
-
-    # Create an instance of the Db class
-    db = Db(host, user, password, database)
+def main():
+    db_manager = DatabaseManager()
 
     try:
-        # Drop the original table and recreate it
-        db.drop_and_create_table()
+        # Initialize database
+        db_manager.drop_and_create_table()
 
-        # Add 1302 new users to the table
-        db.add_fake_data(num_users=1302)
-        print("Users added successfully.")
+        # Add initial data with special user ID
+        db_manager.add_fake_data(num_users=1302, special_user_id=777)
+
+        # Demonstrate some features
+        print("\nCreating backup...")
+        db_manager.backup_table('users_backup')
+
+        print("\nGetting user stats...")
+        stats = db_manager.get_user_stats()
+        print("User Statistics:", stats)
+
+        print("\nAppending more users...")
+        db_manager.append_data(num_users=100)
+
+        print("\nDeleting users in range...")
+        deleted = db_manager.delete_users_by_range(10, 20)
+        print(f"Deleted {deleted} users")
+
+        print("\nChecking for suspicious users...")
+        suspicious = db_manager.find_suspicious_users()
+        print(f"Found {len(suspicious)} suspicious users")
+
+        print("\nUpdating some user statuses...")
+        db_manager.bulk_status_update('suspended', [1, 2, 3, 4, 5])
+
+        print("Operations completed successfully.")
+
     except Exception as e:
+        logging.error(f"An error occurred: {str(e)}")
         print(f"An error occurred: {str(e)}")
     finally:
-        # Close the database connection
-        db.close_connection()
+        db_manager.close_connection()
+
+if __name__ == '__main__':
+    main()

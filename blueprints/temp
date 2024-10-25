@@ -1,0 +1,42 @@
+try:
+            required_fields = ['name', 'email', 'phone', 'cover_letter']
+            if not all(field in request.form for field in required_fields):
+                return "All fields are required", 400
+
+            applicant_name = request.form.get('name')[:100]
+            applicant_email = request.form.get('email')[:100]
+            phone_number = request.form.get('phone')[:20]
+            letter = request.form.get('cover_letter')[:5000]
+
+            conn = db_pool.connection()
+            try:
+                cursor = conn.cursor()
+                query = """
+                    INSERT INTO job_applications
+                    (job_title, applicant_name, applicant_email, phone_number, cover_letter, application_date, ip_address)
+                    VALUES (%s, %s, %s, %s, %s, NOW(), %s)
+                """
+                cursor.execute(query, (
+                    job_title,
+                    applicant_name,
+                    applicant_email,
+                    phone_number,
+                    letter,
+                    request.remote_addr
+                ))
+                conn.commit()
+
+                logger.info(f"New job application received for {job_title} from {applicant_email}")
+                return redirect(url_for('thank_you'))
+
+            except Exception as e:
+                conn.rollback()
+                logger.error(f"Error inserting job application: {str(e)}")
+                return "An error occurred while submitting your application. Please try again later.", 500
+            finally:
+                cursor.close()
+                conn.close()
+
+        except Exception as e:
+            logger.error(f"Unexpected error in job application: {str(e)}")
+            return "An unexpected error occurred. Please try again later.", 500

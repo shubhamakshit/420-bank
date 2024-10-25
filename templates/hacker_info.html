@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+
+
+
+{% block content %}
+
+    {% if show_login %}
+        <form action="{{ url_for('hacker_info') }}" method="POST">
+            <input type="submit" value="Admin Login">
+        </form>
+    {% endif %}
+
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8">Ethical Hacker Activity Dashboard</h1>
+
+        <!-- Your Information -->
+        <div class="bg-blue-100 p-4 rounded-lg mb-8">
+            <h2 class="text-xl font-semibold mb-2">Your Information</h2>
+            {% for metric in metrics %}
+                {% if metric.ip_address == current_ip %}
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p><strong>Your IP:</strong> {{ metric.ip_address }}</p>
+                            <p><strong>Your Nickname:</strong> {{ metric.nickname }}</p>
+                        </div>
+                        <div>
+                            <p><strong>Your UUID:</strong> {{ metric.uuid }}</p>
+                            <p><strong>First Seen:</strong> {{ metric.first_seen }}</p>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- All Activity -->
+        <div class="overflow-x-auto">
+            <table class="w-full bg-white shadow rounded-lg overflow-hidden">
+                <thead class="bg-gray-100">
+                <tr>
+                    <th class="px-4 py-2 text-left">Nickname</th>
+                    <th class="px-4 py-2 text-left">IP Address</th>
+                    <th class="px-4 py-2 text-left">Total Requests</th>
+                    <th class="px-4 py-2 text-left">First Seen</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for metric in metrics %}
+                    <tr class="border-b {% if metric.ip_address == current_ip %}bg-blue-50{% endif %}">
+                        <td class="px-4 py-2">{{ metric.nickname }}</td>
+                        <td class="px-4 py-2">{{ metric.ip_address }}</td>
+                        <td class="px-4 py-2">{{ metric.total_requests }}</td>
+                        <td class="px-4 py-2">{{ metric.first_seen }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="4" class="px-4 py-2">
+                            <div class="overflow-x-auto">
+                                <table class="w-full bg-white border rounded">
+                                    <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left">Endpoint</th>
+                                        <th class="px-4 py-2 text-left">Hits</th>
+                                        <th class="px-4 py-2 text-left">Bytes Transferred</th>
+                                        <th class="px-4 py-2 text-left">Last Access</th>
+                                        <th class="px-4 py-2 text-left">Requests per Second</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for stat in metric.endpoint_stats %}
+                                        <tr class="border-b">
+                                            <td class="px-4 py-2">{{ stat.endpoint }}</td>
+                                            <td class="px-4 py-2">{{ stat.hits }}</td>
+                                            <td class="px-4 py-2">{{ stat.bytes_transferred }}</td>
+                                            <td class="px-4 py-2">{{ stat.last_access }}</td>
+                                            <td class="px-4 py-2">{{ stat.requests_per_second }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

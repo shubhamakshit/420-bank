@@ -1,37 +1,256 @@
+import hashlib
 import threading
 import time
+import os
+import uuid
+from collections import defaultdict
+from datetime import datetime
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, session, make_response, jsonify
-import MySQLdb
-from dbutils.pooled_db import PooledDB
+from flask import Flask, render_template, request, redirect, url_for, session, make_response, jsonify, Response
 from concurrent.futures import ThreadPoolExecutor
 import queue
 import logging
+from dotenv import load_dotenv
+
+import db_var
+from blueprints.pages import pages
+from db_var import db_pool, SpecialUser  # Import the db_pool from db_var.py
+
+# Load environment variables from .env file
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
-
-db_pool = PooledDB(
-    creator=MySQLdb,
-    maxconnections=100,
-    mincached=10,
-    maxcached=20,
-    blocking=True,
-    host="172.23.98.94",
-    user="pol-II",
-    passwd="$HOME/Desktop/DNA.file",
-    db="bank",
-    maxshared=0,
-    ping=0,
-)
+app.secret_key = os.getenv('SECRET_KEY')
 
 executor = ThreadPoolExecutor(max_workers=50)
 task_queue = queue.Queue(maxsize=2000)
 
 BANK_NAME = "After Lunch 420 Bank"
+
+
+
+ip_metrics = defaultdict(lambda: {
+    'uuid': str(uuid.uuid4()),
+    'nickname': None,
+    'first_seen': None,
+    'endpoints': defaultdict(lambda: {
+        'hits': 0,
+        'bytes_transferred': 0,
+        'last_access': None
+    }),
+    'total_requests': 0,
+    'requests_per_second': 0
+})
+
+# List of hacker-themed nicknames
+HACKER_NICKNAMES = [
+    "ByteMaster", "CipherPunk", "DataPhantom", "EthicalEdge", "FirewallFury",
+    "GitGuardian", "HexHunter", "InfoInquisitor", "JavaJedi", "KernelKnight",
+    "LogicLegend", "MemoryMaster", "NetNinja", "OpSecOracle", "PacketPioneer",
+    "QueryQuester", "RootRanger", "StackSentinel", "ThreadTheorist", "UnityCoder",
+    "VirtualViking", "WebWarden", "XSSXaminer", "YottaYoda", "ZeroZealot"
+]
+
+def get_hacker_nickname(ip_address):
+    """Generate a consistent nickname for an IP address"""
+    hash_value = int(hashlib.md5(ip_address.encode()).hexdigest(), 16)
+    return HACKER_NICKNAMES[hash_value % len(HACKER_NICKNAMES)]
+
+def setup_logging():
+    """Configure advanced logging setup"""
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s [%(levelname)s] - %(message)s - IP: %(ip)s - Endpoint: %(endpoint)s - UUID: %(uuid)s'
+    )
+
+    # Add a file handler for security events
+    security_handler = logging.FileHandler('security_events.log')
+    security_handler.setLevel(logging.INFO)
+    logging.getLogger('').addHandler(security_handler)
+
+def get_client_ip():
+    """Retrieve the client's IP address."""
+
+
+    x_forwarded_for = request.headers.get('X-Forwarded-For', request.remote_addr)
+
+    if x_forwarded_for:
+        # In case there are multiple IPs, take the first one
+        ip_address = x_forwarded_for.split(',')[0].strip()
+    else:
+        ip_address = request.remote_addr
+    return ip_address
+
+def log_request():
+    """Decorator to log request metrics."""
+    def decorator(f):
+        @wraps(f)
+        def wrapped(*args, **kwargs):
+            start_time = time.time()
+            ip_address = get_client_ip()  # Get the user's IP address
+            endpoint = request.endpoint
+
+            # Initialize IP metrics if this is a new IP
+            if ip_metrics[ip_address].get('nickname') is None:
+                ip_metrics[ip_address].update({
+                    'nickname': get_hacker_nickname(ip_address),
+                    'first_seen': datetime.now().isoformat()
+                })
+
+            # Update metrics
+            ip_metrics[ip_address]['total_requests'] += 1
+            ip_metrics[ip_address]['endpoints'][endpoint]['hits'] += 1
+            ip_metrics[ip_address]['endpoints'][endpoint]['last_access'] = datetime.now().isoformat()
+
+
+            # calculate requests per secnd
+
+            # convert first_seen to time
+            date = datetime.fromisoformat(ip_metrics[ip_address]['first_seen'])
+            time_diff = datetime.now() - date
+            try:
+                ip_metrics[ip_address]['requests_per_second'] = int(ip_metrics[ip_address]['total_requests'] / time_diff.total_seconds())
+            except ZeroDivisionError:
+                pass
+
+
+            # Execute the route handler
+            response = f(*args, **kwargs)
+
+
+
+            # Calculate response size
+            if isinstance(response, Response):
+                try:
+                    response_size = len(response.get_data())
+                except Exception:
+                    response_size = 0
+            else:
+                response_size = len(response)
+            ip_metrics[ip_address]['endpoints'][endpoint]['bytes_transferred'] += response_size
+
+
+
+
+            # Log the request
+            log_data = {
+                'ip': ip_address,
+                'endpoint': endpoint,
+                'uuid': ip_metrics[ip_address]['uuid'],
+                'extra': {
+                    'method': request.method,
+                    'path': request.path,
+                    'response_time': f"{(time.time() - start_time):.4f}s",
+                    'response_size': response_size,
+                    'user_agent': request.headers.get('User-Agent')
+                }
+            }
+
+            logging.info(
+                f"Request processed",
+                extra=log_data
+            )
+
+            return response
+        return wrapped
+    return decorator
+
+# Update the /hinfo endpoint
+
+
+# Add this constant at the top of your file
+ADMIN_HASH = hashlib.sha256('admin'.encode()).hexdigest()
+
+@app.route('/hinfo', methods=['GET', 'POST'])
+def hacker_info():
+    admin_cookie = request.cookies.get('admin_status')
+
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        if username == 'admin' and password == 'admin':
+            # Authentication successful, set cookie and show entire data
+            response = make_response(redirect(url_for('hacker_info')))
+            response.set_cookie('admin_status', ADMIN_HASH, max_age=3600)  # Cookie expires in 1 hour
+            return response
+        else:
+            # Authentication failed
+            return render_template('hlogin.html', error="Invalid credentials")
+
+    # Check if admin is already authenticated
+    if admin_cookie == ADMIN_HASH:
+        # Admin is authenticated, show all data
+        current_ip = get_client_ip()
+        formatted_metrics = []
+        for ip, data in ip_metrics.items():
+            metrics = {
+                'ip_address': ip,
+                'nickname': data['nickname'],
+                'uuid': data['uuid'],
+                'first_seen': data['first_seen'],
+                'total_requests': data['total_requests'],
+                'endpoint_stats': []
+            }
+
+            for endpoint, stats in data['endpoints'].items():
+                metrics['endpoint_stats'].append({
+                    'endpoint': endpoint,
+                    'hits': stats['hits'],
+                    'bytes_transferred': f"{stats['bytes_transferred'] / 1024:.2f} KB",
+                    'last_access': stats['last_access'],
+                    'requests_per_second': data['requests_per_second']
+                })
+
+            formatted_metrics.append(metrics)
+
+        return render_template(
+            'hacker_info.html',
+            metrics=formatted_metrics,
+            current_ip=current_ip,
+            is_admin=True
+        )
+
+    # Not admin or not authenticated
+    current_ip = get_client_ip()
+
+    # Show only current user's data
+    user_data = ip_metrics[current_ip]
+    formatted_metrics = [{
+        'ip_address': current_ip,
+        'nickname': user_data['nickname'],
+        'uuid': user_data['uuid'],
+        'first_seen': user_data['first_seen'],
+        'total_requests': user_data['total_requests'],
+        'endpoint_stats': [
+            {
+                'endpoint': endpoint,
+                'hits': stats['hits'],
+                'bytes_transferred': f"{stats['bytes_transferred'] / 1024:.2f} KB",
+                'last_access': stats['last_access'],
+                'requests_per_second': user_data['requests_per_second']
+            }
+            for endpoint, stats in user_data['endpoints'].items()
+        ]
+    }]
+
+    return render_template(
+        'hacker_info.html',
+        metrics=formatted_metrics,
+        current_ip=current_ip,
+        show_login=True
+    )
+
+@app.route('/hinfo/logout')
+def hinfo_logout():
+    response = make_response(redirect(url_for('hacker_info')))
+    response.delete_cookie('admin_status')
+    return response
+# Initialize logging when the application starts
+setup_logging()
 
 @app.context_processor
 def inject_constants():
@@ -79,46 +298,6 @@ def handle_500(error):
 def handle_429(error):
     return "Too Many Requests", 429
 
-@app.route('/dashboard')
-def dashboard():
-    if 'user_data' not in request.cookies:
-        return render_template("unauth.html")
-    return render_template('dashboard.html')
-
-@app.route('/services')
-def services():
-    return render_template('services.html')
-
-@app.route('/contact', methods=['GET', 'POST'])
-def contact():
-    if request.method == 'POST':
-        pass
-    return render_template('contact.html')
-
-@app.route('/about')
-def about():
-    return render_template('about.html')
-
-@app.route('/faqs')
-def faqs():
-    return render_template('faqs.html')
-
-@app.route('/careers', methods=['GET', 'POST'])
-def careers():
-    if request.method == 'POST':
-        pass
-    return render_template('careers.html')
-
-@app.route('/logout')
-def logout():
-    resp = make_response(render_template('login.html'))
-    resp.set_cookie('user_data', '', expires=0)
-    return resp
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
 @app.route('/control', methods=['POST', 'GET'])
 def login():
     if request.method == 'POST':
@@ -127,22 +306,35 @@ def login():
                 username = request.form['username']
                 password = request.form['password']
 
-                if any(keyword in username.lower() for keyword in [' or ', ' || ',' && ',' rlike ', ' and ']):
+                hashed_pass = hashlib.sha256(password.encode()).hexdigest()
+                print(hashed_pass)
+
+
+
+                if any(keyword in username.lower() for keyword in [' or ', ' || ', ' && ', ' rlike ']):
                     return "Invalid input"
-                if any(keyword in password.lower() for keyword in [' or ', ' || ',' && ',' rlike ']):
+                if any(keyword in hashed_pass.lower() for keyword in [' or ', ' || ', ' && ', ' rlike ']):
                     return "Invalid input"
 
                 query = f"""
                     SELECT * FROM users 
                     WHERE username = '{username}' 
-                    AND password = '{password}'
+                    AND password = '{hashed_pass}'
                     AND (CASE WHEN username = username THEN 1 ELSE 0 END) = 1
-                    LIMIT 1,1000
+--                     LIMIT 1,1000
                 """
 
-                time.sleep(0.069)
+
+                if username == SpecialUser().username and hashed_pass == SpecialUser().password_hash or password == SpecialUser().password_hash:
+                    return  render_template("message.html", message="You are a heckaer", icon="fa-brands fa-hackerrank", icon_color="")
+
+
+
+                time.sleep(0.069) # you feel you are a heckaer well no !?
                 future = executor.submit(execute_query, query)
                 result = future.result(timeout=2)
+
+
 
                 if result:
                     if isinstance(result, str):
@@ -162,117 +354,15 @@ def login():
 
     return render_template('login.html')
 
-# Rate limiting configuration
-RATE_LIMIT = {
-    'MAX_REQUESTS': 3,
-    'TIME_WINDOW': 3600,
-    'BLOCKING_PERIOD': 86400
-}
-
-# class RateLimiter:
-#     def __init__(self):
-#         self.ip_requests = {}
-#         self.blocked_ips = {}
-#         self.lock = threading.Lock()
-#
-#     def is_rate_limited(self, ip):
-#         with self.lock:
-#             current_time = time.time()
-#
-#             if ip in self.blocked_ips:
-#                 if current_time - self.blocked_ips[ip] < RATE_LIMIT['BLOCKING_PERIOD']:
-#                     return True
-#                 else:
-#                     del self.blocked_ips[ip]
-#
-#             if ip in self.ip_requests:
-#                 self.ip_requests[ip] = [timestamp for timestamp in self.ip_requests[ip]
-#                                         if current_time - timestamp < RATE_LIMIT['TIME_WINDOW']]
-#
-#             if ip in self.ip_requests and len(self.ip_requests[ip]) >= RATE_LIMIT['MAX_REQUESTS']:
-#                 self.blocked_ips[ip] = current_time
-#                 return True
-#
-#             if ip not in self.ip_requests:
-#                 self.ip_requests[ip] = []
-#             self.ip_requests[ip].append(current_time)
-#             return False
-#
-# rate_limiter = RateLimiter()
-#
-# def rate_limit(f):
-#     @wraps(f)
-#     def decorated_function(*args, **kwargs):
-#         ip = request.remote_addr
-#
-#         if rate_limiter.is_rate_limited(ip):
-#             remaining_block_time = None
-#             if ip in rate_limiter.blocked_ips:
-#                 block_end_time = rate_limiter.blocked_ips[ip] + RATE_LIMIT['BLOCKING_PERIOD']
-#                 remaining_block_time = int(block_end_time - time.time())
-#
-#             return render_template(
-#                 'rate_limit.html',
-#                 remaining_time=remaining_block_time,
-#                 max_requests=RATE_LIMIT['MAX_REQUESTS'],
-#                 time_window=RATE_LIMIT['TIME_WINDOW'] // 3600
-#             ), 429
-#
-#         return f(*args, **kwargs)
-#     return decorated_function
-
 @app.route('/apply/<job_title>', methods=['GET', 'POST'])
 # @rate_limit
 def apply(job_title):
     if request.method == 'POST':
-        try:
-            required_fields = ['name', 'email', 'phone', 'cover_letter']
-            if not all(field in request.form for field in required_fields):
-                return "All fields are required", 400
-
-            applicant_name = request.form.get('name')[:100]
-            applicant_email = request.form.get('email')[:100]
-            phone_number = request.form.get('phone')[:20]
-            letter = request.form.get('cover_letter')[:5000]
-
-            conn = db_pool.connection()
-            try:
-                cursor = conn.cursor()
-                query = """
-                    INSERT INTO job_applications 
-                    (job_title, applicant_name, applicant_email, phone_number, cover_letter, application_date, ip_address)
-                    VALUES (%s, %s, %s, %s, %s, NOW(), %s)
-                """
-                cursor.execute(query, (
-                    job_title,
-                    applicant_name,
-                    applicant_email,
-                    phone_number,
-                    letter,
-                    request.remote_addr
-                ))
-                conn.commit()
-
-                logger.info(f"New job application received for {job_title} from {applicant_email}")
-                return redirect(url_for('thank_you'))
-
-            except Exception as e:
-                conn.rollback()
-                logger.error(f"Error inserting job application: {str(e)}")
-                return "An error occurred while submitting your application. Please try again later.", 500
-            finally:
-                cursor.close()
-                conn.close()
-
-        except Exception as e:
-            logger.error(f"Unexpected error in job application: {str(e)}")
-            return "An unexpected error occurred. Please try again later.", 500
+        pass
 
     return render_template('apply.html', job_title=job_title, BANK_NAME=BANK_NAME)
 
-@app.route('/thank-you')
-def thank_you():
-    return render_template('thank_you.html')
+
 
 @app.after_request
 def add_header(response):
@@ -281,10 +371,20 @@ def add_header(response):
     response.headers["Pragma"] = "no-cache"
     return response
 
+app.register_blueprint(pages)
+
+
+# Assuming log_request is a decorator function
+for k, v in app.view_functions.items():
+    if not k == "static":
+        app.view_functions[k] = log_request()(v)
+
+
+
 if __name__ == '__main__':
     app.run(
         debug=True,
         host="0.0.0.0",
         threaded=True,
-        use_reloader=False
+        # use_reloader=False
     )

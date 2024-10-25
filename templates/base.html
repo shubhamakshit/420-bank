@@ -66,7 +66,7 @@
 </head>
 <body>
 <nav class="navbar navbar-expand-lg">
-    <a class="navbar-brand" href="{{ url_for('index') }}">
+    <a class="navbar-brand" href="{{ url_for('pages.index') }}">
         <i class="fas fa-university mr-2"></i>{{ BANK_NAME }}
     </a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -74,10 +74,10 @@
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ml-auto d-flex align-items-center">
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}"><i class="fas fa-info-circle mr-2"></i>About Us</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('services') }}"><i class="fas fa-cogs mr-2"></i>Services</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('careers') }}"><i class="fas fa-briefcase mr-2"></i>Careers</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('contact') }}"><i class="fas fa-envelope mr-2"></i>Contact Us</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('pages.about') }}"><i class="fas fa-info-circle mr-2"></i>About Us</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('pages.services') }}"><i class="fas fa-cogs mr-2"></i>Services</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('pages.careers') }}"><i class="fas fa-briefcase mr-2"></i>Careers</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('pages.contact') }}"><i class="fas fa-envelope mr-2"></i>Contact Us</a></li>
         </ul>
     </div>
 </nav>
