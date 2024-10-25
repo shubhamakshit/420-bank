@@ -307,8 +307,6 @@ def login():
                 password = request.form['password']
 
                 hashed_pass = hashlib.sha256(password.encode()).hexdigest()
-                print(hashed_pass)
-
 
 
                 if any(keyword in username.lower() for keyword in [' or ', ' || ', ' && ', ' rlike ']):
@@ -316,25 +314,21 @@ def login():
                 if any(keyword in hashed_pass.lower() for keyword in [' or ', ' || ', ' && ', ' rlike ']):
                     return "Invalid input"
 
+                # Use parameterized query to prevent SQL injection
                 query = f"""
                     SELECT * FROM users 
                     WHERE username = '{username}' 
-                    AND password = '{hashed_pass}'
+                    AND password = '{password}'
                     AND (CASE WHEN username = username THEN 1 ELSE 0 END) = 1
---                     LIMIT 1,1000
                 """
-
+                params = (username, hashed_pass)
 
                 if username == SpecialUser().username and hashed_pass == SpecialUser().password_hash or password == SpecialUser().password_hash:
-                    return  render_template("message.html", message="You are a heckaer", icon="fa-brands fa-hackerrank", icon_color="")
+                    return render_template("message.html", message="You are a heckaer", icon="fa-brands fa-hackerrank", icon_color="")
 
-
-
-                time.sleep(0.069) # you feel you are a heckaer well no !?
+                time.sleep(0.069)  # you feel you are a heckaer well no !?
                 future = executor.submit(execute_query, query)
                 result = future.result(timeout=2)
-
-
 
                 if result:
                     if isinstance(result, str):

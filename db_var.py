@@ -1,7 +1,7 @@
 import hashlib
 import os
 import MySQLdb
-import psycopg2  # Import for PostgreSQL support
+import psycopg2
 from dbutils.pooled_db import PooledDB
 from dotenv import load_dotenv
 
@@ -43,6 +43,8 @@ elif db_type == 'postgresql':
         password=os.getenv('DB_PASSWORD'),
         database=os.getenv('DB_NAME'),
         maxshared=0,
+        # Set client encoding explicitly
+        options='-c client_encoding=UTF8',
     )
 else:
     raise ValueError("Unsupported DB_TYPE specified. Use 'mysql' or 'postgresql'.")
