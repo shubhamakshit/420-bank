@@ -11,6 +11,9 @@ load_dotenv()
 # Get the database type from environment variables (default to MySQL if not specified)
 db_type = os.getenv('DB_TYPE', 'mysql').lower()
 
+# Get the database port from environment variables, or use default values for each type
+db_port = int(os.getenv('DB_PORT', 3306 if db_type == 'mysql' else 5432))
+
 # Configure the database connection pool based on the selected database type
 if db_type == 'mysql':
     db_pool = PooledDB(
@@ -20,6 +23,7 @@ if db_type == 'mysql':
         maxcached=20,
         blocking=True,
         host=os.getenv('DB_HOST'),
+        port=db_port,
         user=os.getenv('DB_USER'),
         passwd=os.getenv('DB_PASSWORD'),
         db=os.getenv('DB_NAME'),
@@ -34,6 +38,7 @@ elif db_type == 'postgresql':
         maxcached=20,
         blocking=True,
         host=os.getenv('DB_HOST'),
+        port=db_port,
         user=os.getenv('DB_USER'),
         password=os.getenv('DB_PASSWORD'),
         database=os.getenv('DB_NAME'),
