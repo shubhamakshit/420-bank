@@ -1,6 +1,8 @@
 import hashlib
 import os
-import MySQLdb
+import pymysql
+pymysql.install_as_MySQLdb()
+
 import psycopg2
 from dbutils.pooled_db import PooledDB
 from dotenv import load_dotenv
@@ -17,7 +19,7 @@ db_port = int(os.getenv('DB_PORT', 3306 if db_type == 'mysql' else 5432))
 # Configure the database connection pool based on the selected database type
 if db_type == 'mysql':
     db_pool = PooledDB(
-        creator=MySQLdb,
+        creator=pymysql,
         maxconnections=100,
         mincached=10,
         maxcached=20,

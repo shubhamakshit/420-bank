@@ -1,7 +1,7 @@
 DBUtils==3.1.0
 Faker==30.6.0
 Flask==3.0.3
-MySQL-python==1.2.5
+pymysql
 psycopg2==2.9.10
 python-dotenv==1.0.1
 tqdm==4.66.5
