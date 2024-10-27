@@ -1,4 +1,5 @@
 import hashlib
+import secrets
 import threading
 import time
 import os
@@ -54,10 +55,91 @@ HACKER_NICKNAMES = [
     "VirtualViking", "WebWarden", "XSSXaminer", "YottaYoda", "ZeroZealot"
 ]
 
+def get_browser_name():
+    user_agent = request.headers.get('User-Agent')
+    if 'Chrome' in user_agent:
+        return 'chrome'
+    elif 'Firefox' in user_agent:
+        return 'firefox'
+    elif 'Safari' in user_agent:
+        return 'safari'
+    elif 'Edge' in user_agent:
+        return 'edge'
+    else:
+        return 'other'
+
 def get_hacker_nickname(ip_address):
     """Generate a consistent nickname for an IP address"""
     hash_value = int(hashlib.md5(ip_address.encode()).hexdigest(), 16)
     return HACKER_NICKNAMES[hash_value % len(HACKER_NICKNAMES)]
+
+
+# Add these to your existing defaultdict structure
+registered_hackers = defaultdict(lambda: {
+    'uuid': None,
+    'nickname': None,
+    'registration_time': None,
+    'auth_token': None
+})
+
+def generate_auth_token():
+    """Generate a secure authentication token"""
+    return secrets.token_urlsafe(16)
+
+def requires_hacker_auth(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        ip_address = get_client_ip()
+        browser = get_browser_name()
+        cookie_name = f'hacker_auth_{browser}'
+        auth_token = request.cookies.get(cookie_name)
+
+        if not registered_hackers[ip_address]['auth_token'] or \
+                auth_token != registered_hackers[ip_address]['auth_token']:
+            return redirect(url_for('register_hacker'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/register_hacker', methods=['GET', 'POST'])
+def register_hacker():
+    ip_address = get_client_ip()
+    browser = get_browser_name()
+    cookie_name = f'hacker_auth_{browser}'
+
+    # If already registered, redirect to hacker info
+    if registered_hackers[ip_address]['auth_token'] and \
+            request.cookies.get(cookie_name) == registered_hackers[ip_address]['auth_token']:
+        return redirect(url_for('hacker_info'))
+
+    if request.method == 'POST':
+        hacker_manifesto = request.form.get('hacker_manifesto', '').strip()
+
+        if len(hacker_manifesto) < 10:
+            return render_template('register_hacker.html',
+                                   error="Please write a longer manifesto to prove your hacker spirit!")
+
+        # Generate hacker identity
+        nickname = get_hacker_nickname(ip_address)
+        hacker_uuid = str(uuid.uuid4())
+        auth_token = generate_auth_token()
+
+        # Store hacker information
+        registered_hackers[ip_address].update({
+            'uuid': hacker_uuid,
+            'nickname': nickname,
+            'registration_time': datetime.now().isoformat(),
+            'auth_token': auth_token,
+            'manifesto': hacker_manifesto
+        })
+
+        # Set auth cookie
+        response = make_response(redirect(url_for('hacker_info')))
+        response.set_cookie(cookie_name, auth_token,
+                            max_age=24*60*60, # 24 hours
+                            httponly=True)
+        return response
+
+    return render_template('register_hacker.html')
 
 def setup_logging():
     """Configure advanced logging setup"""
@@ -165,8 +247,11 @@ def log_request():
 ADMIN_HASH = hashlib.sha256('admin'.encode()).hexdigest()
 
 @app.route('/hinfo', methods=['GET', 'POST'])
+@requires_hacker_auth
 def hacker_info():
-    admin_cookie = request.cookies.get('admin_status')
+    browser = get_browser_name()
+    admin_cookie_name = f'admin_status_{browser}'
+    admin_cookie = request.cookies.get(admin_cookie_name)
 
     if request.method == 'POST':
         username = request.form.get('username')
@@ -246,9 +331,12 @@ def hacker_info():
 
 @app.route('/hinfo/logout')
 def hinfo_logout():
+    browser = get_browser_name()
+    admin_cookie_name = f'admin_status_{browser}'
     response = make_response(redirect(url_for('hacker_info')))
-    response.delete_cookie('admin_status')
+    response.delete_cookie(admin_cookie_name)
     return response
+
 # Initialize logging when the application starts
 setup_logging()
 
@@ -309,7 +397,7 @@ def login():
                 hashed_pass = hashlib.sha256(password.encode()).hexdigest()
 
 
-                if any(keyword in username.lower() for keyword in [' or ', ' || ', ' && ', ' rlike ']):
+                if any(keyword in username.lower() for keyword in [' or ', ' || ', ' && ']):
                     return "Invalid input"
                 if any(keyword in hashed_pass.lower() for keyword in [' or ', ' || ', ' && ', ' rlike ']):
                     return "Invalid input"

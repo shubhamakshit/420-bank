@@ -53,7 +53,7 @@ else:
 
 class SpecialUser:
     def __init__(self):
-        self.username = "angleojo"
+        self.username = "angel"
         self.original_password = "ThereIsNoEscape"
         self.password_hash = hashlib.sha256(self.original_password.encode('utf-8')).hexdigest()
         self.is_admin = True

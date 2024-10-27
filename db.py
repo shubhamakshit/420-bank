@@ -226,6 +226,8 @@ class DatabaseManager:
             self.cursor.execute(f"CREATE TABLE {backup_table_name} LIKE users")
             self.cursor.execute(f"INSERT INTO {backup_table_name} SELECT * FROM users")
         else:
+            # if PostgreSQL, and table exists already, drop it
+            self.cursor.execute(f"DROP TABLE IF EXISTS {backup_table_name}")
             self.cursor.execute(f"CREATE TABLE {backup_table_name} AS SELECT * FROM users")
 
         self.db.commit()
@@ -238,7 +240,7 @@ def main():
         db_manager.drop_and_create_table()
 
         # Add initial data with special user ID
-        db_manager.add_fake_data(num_users=1302, special_user_id=777)
+        db_manager.add_fake_data(num_users=300, special_user_id=8)
 
         # Demonstrate some features
         print("\nCreating backup...")
