@@ -6,3 +6,4 @@ psycopg2==2.9.10
 python-dotenv==1.0.1
 tqdm==4.66.5
 gunicorn
+cryptography
