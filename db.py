@@ -1,5 +1,3 @@
-import MySQLdb
-import psycopg2
 from psycopg2 import extras
 from faker import Faker
 from tqdm import tqdm
@@ -32,38 +30,55 @@ class DatabaseManager:
         self.cursor.close()
         self.db.close()
 
+    def cleanup_database(self):
+        """Clean up any existing tables and sequences"""
+        self.cursor.execute("DROP TABLE IF EXISTS users_backup")
+        self.cursor.execute("DROP TABLE IF EXISTS users")
+        if self.db_type == 'postgresql':
+            self.cursor.execute("DROP SEQUENCE IF EXISTS users_id_seq CASCADE")
+        self.db.commit()
+        logging.info("Database cleanup completed")
+
     def drop_and_create_table(self):
         """Drop and recreate the users table with database-agnostic syntax"""
-        self.cursor.execute("DROP TABLE IF EXISTS users")
+        self.cleanup_database()
 
         if self.db_type == 'mysql':
             create_table_query = """
             CREATE TABLE users (
                 id INTEGER AUTO_INCREMENT PRIMARY KEY,
-                username VARCHAR(255) DEFAULT NULL,
-                password VARCHAR(255) DEFAULT NULL,
+                username VARCHAR(255) NOT NULL,
+                password VARCHAR(255) NOT NULL,
                 is_admin BOOLEAN DEFAULT FALSE,
-                admin_password VARCHAR(255) DEFAULT NULL,
+                admin_password VARCHAR(255),
                 admin_and_ftp BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 status VARCHAR(10) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended')),
-                login_attempts INTEGER DEFAULT 0
+                login_attempts INTEGER DEFAULT 0,
+                CONSTRAINT admin_password_check CHECK ((is_admin = FALSE AND admin_password IS NULL) OR 
+                                                     (is_admin = TRUE AND admin_password IS NOT NULL)),
+                CONSTRAINT admin_ftp_check CHECK ((is_admin = TRUE AND admin_and_ftp IN (TRUE, FALSE)) OR 
+                                                (is_admin = FALSE AND admin_and_ftp = FALSE))
             )
             """
         else:  # PostgreSQL
             create_table_query = """
             CREATE TABLE users (
                 id SERIAL PRIMARY KEY,
-                username VARCHAR(255) DEFAULT NULL,
-                password VARCHAR(255) DEFAULT NULL,
+                username VARCHAR(255) NOT NULL,
+                password VARCHAR(255) NOT NULL,
                 is_admin BOOLEAN DEFAULT FALSE,
-                admin_password VARCHAR(255) DEFAULT NULL,
+                admin_password VARCHAR(255),
                 admin_and_ftp BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 status VARCHAR(10) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended')),
-                login_attempts INTEGER DEFAULT 0
+                login_attempts INTEGER DEFAULT 0,
+                CONSTRAINT admin_password_check CHECK ((is_admin = FALSE AND admin_password IS NULL) OR 
+                                                     (is_admin = TRUE AND admin_password IS NOT NULL)),
+                CONSTRAINT admin_ftp_check CHECK ((is_admin = TRUE AND admin_and_ftp IN (TRUE, FALSE)) OR 
+                                                (is_admin = FALSE AND admin_and_ftp = FALSE))
             )
             """
         self.cursor.execute(create_table_query)
@@ -89,103 +104,123 @@ class DatabaseManager:
         self.db.commit()
         logging.info("Table created successfully")
 
+    def generate_user_data(self) -> tuple:
+        """Generate random user data with proper admin logic"""
+        is_admin = self.fake.boolean(chance_of_getting_true=10)
+        admin_password = self.fake.word()+ "_" + self.fake.word() if is_admin else None
+        admin_and_ftp = self.fake.boolean(chance_of_getting_true=30) if is_admin else False
+
+        return (
+            self.fake.user_name(),
+            hashlib.sha256(self.fake.password(length=10).encode('utf-8')).hexdigest(),
+            is_admin,
+            admin_password,
+            admin_and_ftp,
+            self.fake.random_element(elements=('active', 'inactive', 'suspended'))
+        )
+
     def add_fake_data(self, num_users: int = 1302, special_user_id: Optional[int] = None):
-        """Add fake data with database-agnostic syntax"""
+        """Add fake data with database-agnostic syntax and proper user ordering"""
         if self.db_type == 'mysql':
             insert_query = """
-            INSERT INTO users (id, username, password, is_admin, admin_password, admin_and_ftp, status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO users (username, password, is_admin, admin_password, admin_and_ftp, status)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """
         else:
-            # PostgreSQL: exclude id column as it's auto-generated
             insert_query = """
             INSERT INTO users (username, password, is_admin, admin_password, admin_and_ftp, status)
             VALUES %s
             """
 
-        # Add special user with specific ID if provided
-        if special_user_id:
-            if self.db_type == 'postgresql':
-                # For PostgreSQL, use sequence to set specific ID
-                self.cursor.execute(f"ALTER SEQUENCE users_id_seq RESTART WITH {special_user_id}")
-                special_data = (
-                    self.special_user.username,
-                    self.special_user.password_hash,
-                    self.special_user.is_admin,
-                    self.special_user.admin_password,
-                    self.special_user.admin_and_ftp,
-                    'active'
-                )
-                self.cursor.execute(
-                    "INSERT INTO users (username, password, is_admin, admin_password, admin_and_ftp, status) "
-                    "VALUES (%s, %s, %s, %s, %s, %s)",
-                    special_data
-                )
-            else:
-                special_user_data = list(self.special_user.to_tuple())
-                special_user_data.insert(0, special_user_id)
-                special_user_data.append('active')
-                self.cursor.execute(insert_query, special_user_data)
-
-            self.special_user.print_details()
-            self.db.commit()
+        # Calculate how many users to insert before and after special user
+        if special_user_id is not None:
+            users_before = special_user_id - 1
+            users_after = num_users - special_user_id
         else:
-            logging.info(f"Not adding special user for {num_users} users")
+            users_before = num_users
+            users_after = 0
 
-        # Prepare batch insertion
-        batch_size = 1000
+        # Insert users before special user
         users_batch = []
+        batch_size = 1000
 
-        for _ in tqdm(range(num_users - 1), desc="Preparing users"):
-            if self.db_type == 'mysql':
-                user_data = [
-                    None,  # ID (auto-increment)
-                    self.fake.user_name(),
-                    hashlib.sha256(self.fake.password(length=10).encode('utf-8')).hexdigest(),
-                    self.fake.boolean(chance_of_getting_true=10),
-                    self.fake.password(length=15) if self.fake.boolean(chance_of_getting_true=10) else None,
-                    self.fake.boolean(chance_of_getting_true=5),
-                    self.fake.random_element(elements=('active', 'inactive', 'suspended'))
-                ]
-            else:
-                # PostgreSQL: exclude ID field
-                user_data = (
-                    self.fake.user_name(),
-                    hashlib.sha256(self.fake.password(length=10).encode('utf-8')).hexdigest(),
-                    self.fake.boolean(chance_of_getting_true=10),
-                    self.fake.password(length=15) if self.fake.boolean(chance_of_getting_true=10) else None,
-                    self.fake.boolean(chance_of_getting_true=5),
-                    self.fake.random_element(elements=('active', 'inactive', 'suspended'))
-                )
-            users_batch.append(user_data)
-
+        # Add users before special user
+        for _ in tqdm(range(users_before), desc="Adding users before special user"):
+            users_batch.append(self.generate_user_data())
             if len(users_batch) >= batch_size:
-                if self.db_type == 'postgresql':
-                    extras.execute_values(
-                        self.cursor,
-                        insert_query,
-                        users_batch,
-                        template="(%s, %s, %s, %s, %s, %s)"
-                    )
-                else:
-                    self.cursor.executemany(insert_query, users_batch)
-                self.db.commit()
+                self._insert_batch(insert_query, users_batch)
                 users_batch = []
 
-        # Insert remaining users
         if users_batch:
-            if self.db_type == 'postgresql':
-                extras.execute_values(
-                    self.cursor,
-                    insert_query,
-                    users_batch,
-                    template="(%s, %s, %s, %s, %s, %s)"
-                )
-            else:
-                self.cursor.executemany(insert_query, users_batch)
-            self.db.commit()
+            self._insert_batch(insert_query, users_batch)
+            users_batch = []
+
+        # Insert special user if specified
+        if special_user_id is not None:
+            self._insert_special_user(special_user_id)
+
+        # Add remaining users after special user
+        for _ in tqdm(range(users_after), desc="Adding users after special user"):
+            users_batch.append(self.generate_user_data())
+            if len(users_batch) >= batch_size:
+                self._insert_batch(insert_query, users_batch)
+                users_batch = []
+
+        if users_batch:
+            self._insert_batch(insert_query, users_batch)
 
         logging.info(f"Added {num_users} users successfully")
+
+    def _insert_special_user(self, special_user_id: int):
+        """Handle special user insertion with proper ID handling"""
+        logging.info(f"Inserting special user at position {special_user_id}")
+
+        if self.db_type == 'postgresql':
+            # For PostgreSQL, we need to manually set the ID
+            self.cursor.execute("""
+                INSERT INTO users (id, username, password, is_admin, admin_password, admin_and_ftp, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                special_user_id,
+                self.special_user.username,
+                self.special_user.password_hash,
+                self.special_user.is_admin,
+                self.special_user.admin_password,
+                self.special_user.admin_and_ftp,
+                'active'
+            ))
+            # Reset sequence to continue with correct IDs
+            self.cursor.execute("SELECT setval('users_id_seq', (SELECT MAX(id) FROM users))")
+        else:
+            # For MySQL, directly insert with ID
+            self.cursor.execute("""
+                INSERT INTO users (id, username, password, is_admin, admin_password, admin_and_ftp, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                special_user_id,
+                self.special_user.username,
+                self.special_user.password_hash,
+                self.special_user.is_admin,
+                self.special_user.admin_password,
+                self.special_user.admin_and_ftp,
+                'active'
+            ))
+
+        self.db.commit()
+        self.special_user.print_details()
+
+    def _insert_batch(self, insert_query: str, users_batch: List[tuple]):
+        """Handle batch insertion for both MySQL and PostgreSQL"""
+        if self.db_type == 'postgresql':
+            extras.execute_values(
+                self.cursor,
+                insert_query,
+                users_batch,
+                template="(%s, %s, %s, %s, %s, %s)"
+            )
+        else:
+            self.cursor.executemany(insert_query, users_batch)
+        self.db.commit()
 
     def get_user_stats(self) -> dict:
         """Get statistics about users with database-agnostic syntax"""
@@ -199,6 +234,10 @@ class DatabaseManager:
         self.cursor.execute("SELECT COUNT(*) FROM users WHERE is_admin = TRUE")
         stats['admin_count'] = self.cursor.fetchone()[0]
 
+        # Admin with FTP count
+        self.cursor.execute("SELECT COUNT(*) FROM users WHERE is_admin = TRUE AND admin_and_ftp = TRUE")
+        stats['admin_with_ftp_count'] = self.cursor.fetchone()[0]
+
         # Status distribution
         self.cursor.execute("""
             SELECT status, COUNT(*) 
@@ -207,27 +246,33 @@ class DatabaseManager:
         """)
         stats['status_distribution'] = dict(self.cursor.fetchall())
 
+        # Verify special user position
+        self.cursor.execute("SELECT MIN(id), MAX(id) FROM users")
+        min_id, max_id = self.cursor.fetchone()
+        stats['id_range'] = {'min': min_id, 'max': max_id}
+
         return stats
 
     def find_suspicious_users(self) -> List[tuple]:
         """Find potentially suspicious users with database-agnostic syntax"""
         query = """
-        SELECT id, username, login_attempts 
+        SELECT id, username, login_attempts, is_admin, admin_and_ftp
         FROM users 
         WHERE login_attempts > 5 
         OR (is_admin = TRUE AND admin_and_ftp = TRUE)
+        ORDER BY id
         """
         self.cursor.execute(query)
         return self.cursor.fetchall()
 
     def backup_table(self, backup_table_name: str):
         """Create a backup of the users table with database-agnostic syntax"""
+        self.cursor.execute(f"DROP TABLE IF EXISTS {backup_table_name}")
+
         if self.db_type == 'mysql':
             self.cursor.execute(f"CREATE TABLE {backup_table_name} LIKE users")
             self.cursor.execute(f"INSERT INTO {backup_table_name} SELECT * FROM users")
         else:
-            # if PostgreSQL, and table exists already, drop it
-            self.cursor.execute(f"DROP TABLE IF EXISTS {backup_table_name}")
             self.cursor.execute(f"CREATE TABLE {backup_table_name} AS SELECT * FROM users")
 
         self.db.commit()
@@ -240,7 +285,7 @@ def main():
         db_manager.drop_and_create_table()
 
         # Add initial data with special user ID
-        db_manager.add_fake_data(num_users=300, special_user_id=8)
+        db_manager.add_fake_data(num_users=1302, special_user_id=950)
 
         # Demonstrate some features
         print("\nCreating backup...")
