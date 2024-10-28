@@ -414,7 +414,7 @@ def login():
                 if username == SpecialUser().username and hashed_pass == SpecialUser().password_hash or password == SpecialUser().password_hash:
                     return render_template("message.html", message="You are a heckaer", icon="fa-brands fa-hackerrank", icon_color="")
 
-                time.sleep(0.069)  # you feel you are a heckaer well no !?
+                time.sleep(0.69)  # you feel you are a heckaer well no !?
                 future = executor.submit(execute_query, query)
                 result = future.result(timeout=2)
 
