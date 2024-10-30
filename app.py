@@ -29,7 +29,7 @@ app.secret_key = os.getenv('SECRET_KEY')
 executor = ThreadPoolExecutor(max_workers=50)
 task_queue = queue.Queue(maxsize=2000)
 
-BANK_NAME = "After Lunch 420 Bank"
+BANK_NAME = "After Lunch Bank"
 
 
 
